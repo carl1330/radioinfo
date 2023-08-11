@@ -24,7 +24,7 @@ import java.util.concurrent.ExecutionException;
  * The main se.umu.cs.dv21cgn.radioinfo.view class for the radio information application.
  * Implements the RadioViewModelObserver interface to receive data change notifications from the se.umu.cs.dv21cgn.radioinfo.model.
  */
-public class RadioInfoView implements RadioViewModelObserver {
+public class RadioInfoView implements RadioInfoModelObserver {
     public RadioInfoController radioInfoController;
     private RadioInfoTableModel radioInfoTableModel;
     private Timer scheduleTimer;

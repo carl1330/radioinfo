@@ -57,8 +57,8 @@ public class RadioInfoController {
      * @throws InterruptedException   If the thread is interrupted while waiting.
      */
     public void selectChannel(int channelId) throws HttpBadRequestException, IOException, URISyntaxException, InterruptedException {
-        radioInfoModel.setSelectedChannelId(channelId);
         if(!scheduleIsEmpty(channelId)) {
+            radioInfoModel.setSelectedChannelId(channelId);
             return;
         }
         fetchSchedule(channelId);
@@ -73,12 +73,13 @@ public class RadioInfoController {
      * @throws URISyntaxException     If there is a syntax error in a URI.
      * @throws InterruptedException   If the thread is interrupted while waiting.
      */
-    public  void fetchSchedule(int channelId) throws HttpBadRequestException, IOException, URISyntaxException, InterruptedException {
+    public void fetchSchedule(int channelId) throws HttpBadRequestException, IOException, URISyntaxException, InterruptedException {
         channelUpdateLock.lock();
         try {
             Schedule schedule = radioApi.getSchedule(channelId).toSchedule();
             LinkedHashMap<Integer, Channel> channels = radioInfoModel.getChannels();
             channels.replace(channelId, new Channel(channelId, radioInfoModel.getChannels().get(channelId).name(), schedule));
+            radioInfoModel.setSelectedChannelId(channelId);
             radioInfoModel.setChannels(channels);
         } finally {
             channelUpdateLock.unlock();
@@ -164,7 +165,7 @@ public class RadioInfoController {
      *
      * @param radioInfoView The observer to add.
      */
-    public void addModelObserver(RadioViewModelObserver radioInfoView) {
+    public void addModelObserver(RadioInfoModelObserver radioInfoView) {
         radioInfoModel.addObserver(radioInfoView);
     }
 }

@@ -9,7 +9,7 @@ public class RadioInfoModel {
 
     private LinkedHashMap<Integer, Channel> channels;
     private final AtomicInteger selectedChannel;
-    private final List<RadioViewModelObserver> observers;
+    private final List<RadioInfoModelObserver> observers;
 
     /**
      * Constructs a new RadioInfoModel instance with default values.
@@ -36,7 +36,7 @@ public class RadioInfoModel {
      *
      * @param observer The observer to be added.
      */
-    public synchronized void addObserver(RadioViewModelObserver observer) {
+    public synchronized void addObserver(RadioInfoModelObserver observer) {
         observers.add(observer);
     }
 
@@ -44,7 +44,7 @@ public class RadioInfoModel {
      * Notifies all registered observers that radio data has changed.
      */
     private void notifyObservers() {
-        for (RadioViewModelObserver observer : observers) {
+        for (RadioInfoModelObserver observer : observers) {
             observer.onRadioDataChanged();
         }
     }
