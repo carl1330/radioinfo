@@ -1,11 +1,11 @@
-import api.RadioApi;
-import api.sr.SrRadioApi;
-import api.sr.SrRadioApiScheduleItemResponse;
-import api.sr.SrRadioApiScheduleProgramItem;
-import api.sr.SrRadioApiScheduleResponse;
-import model.HttpBadRequestException;
-import controller.RadioInfoController;
-import model.*;
+import se.umu.cs.dv21cgn.radioinfo.api.RadioApi;
+import se.umu.cs.dv21cgn.radioinfo.api.sr.SrRadioApi;
+import se.umu.cs.dv21cgn.radioinfo.api.sr.SrRadioApiScheduleItemResponse;
+import se.umu.cs.dv21cgn.radioinfo.api.sr.SrRadioApiScheduleProgramItem;
+import se.umu.cs.dv21cgn.radioinfo.api.sr.SrRadioApiScheduleResponse;
+import se.umu.cs.dv21cgn.radioinfo.model.HttpBadRequestException;
+import se.umu.cs.dv21cgn.radioinfo.controller.RadioInfoController;
+import se.umu.cs.dv21cgn.radioinfo.model.*;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;

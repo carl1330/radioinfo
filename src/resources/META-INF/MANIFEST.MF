@@ -1,0 +1,3 @@
+Manifest-Version: 1.0
+Main-Class: se.umu.cs.dv21cgn.radioinfo.RadioInfo
+Class-Path: se.umu.cs.dv21cgn.radioinfo.dependencies/flatlaf-3.2.jar se.umu.cs.dv21cgn.radioinfo.dependencies/gson-2.10.1.jar

@@ -1,8 +1,8 @@
-import api.RadioApi;
-import api.RadioApiChannelsResponse;
-import api.RadioApiProgramResponse;
-import api.RadioApiScheduleResponse;
-import model.HttpBadRequestException;
+import se.umu.cs.dv21cgn.radioinfo.api.RadioApi;
+import se.umu.cs.dv21cgn.radioinfo.api.RadioApiChannelsResponse;
+import se.umu.cs.dv21cgn.radioinfo.api.RadioApiProgramResponse;
+import se.umu.cs.dv21cgn.radioinfo.api.RadioApiScheduleResponse;
+import se.umu.cs.dv21cgn.radioinfo.model.HttpBadRequestException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
