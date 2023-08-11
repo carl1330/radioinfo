@@ -180,13 +180,23 @@ public class RadioInfoView implements RadioViewModelObserver {
         JMenuBar menuBar = new JMenuBar();
         JMenu menu = new JMenu("File");
         JMenuItem reload = new JMenuItem("Reload cached schedules");
-        reload.addActionListener((e) -> new Thread(() -> {
-            try {
+        reload.addActionListener((e) -> new SwingWorker<Void, Void>() {
+            @Override
+            protected Void doInBackground() throws Exception {
                 radioInfoController.updateCachedSchedules();
-            } catch (HttpBadRequestException | IOException | URISyntaxException | InterruptedException ex) {
-                SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(null, "Något gick fel vid hämtning av tablåer", "Error", JOptionPane.ERROR_MESSAGE));
+                return null;
             }
-        }).start());
+
+            @Override
+            protected void done() {
+                try {
+                    get();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    JOptionPane.showMessageDialog(null, "An error occurred during schedule update", "Error", JOptionPane.ERROR_MESSAGE);
+                }
+            }
+        }.execute());
 
         menu.add(reload);
         menuBar.add(menu);
@@ -212,15 +222,25 @@ public class RadioInfoView implements RadioViewModelObserver {
                 return this;
             }
         });
-        channelSelector.addActionListener((e) -> new Thread(() -> {
-            Channel selectedChannel = (Channel) channelSelector.getSelectedItem();
-            try {
+        channelSelector.addActionListener((e) -> new SwingWorker<Void, Void> () {
+            @Override
+            protected Void doInBackground() throws Exception {
+                Channel selectedChannel = (Channel) channelSelector.getSelectedItem();
                 assert selectedChannel != null;
                 radioInfoController.selectChannel(selectedChannel.id());
-            } catch (HttpBadRequestException | IOException | URISyntaxException | InterruptedException ex) {
-                SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(null, "Något gick fel vid hämtning av tablåer", "Error", JOptionPane.ERROR_MESSAGE));
+                return null;
             }
-        }).start());
+
+            @Override
+            protected void done() {
+                try {
+                    get();
+                } catch (Exception e) {
+                    JOptionPane.showMessageDialog(null, "Något gick fel vid hämtning av tablåer", "Error", JOptionPane.ERROR_MESSAGE);
+                }
+            }
+
+        }.execute());
         return channelSelector;
     }
 
