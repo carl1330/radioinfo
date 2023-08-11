@@ -3,12 +3,9 @@ import api.sr.SrRadioApi;
 import api.sr.SrRadioApiScheduleItemResponse;
 import api.sr.SrRadioApiScheduleProgramItem;
 import api.sr.SrRadioApiScheduleResponse;
-import api.HttpBadRequestException;
+import model.HttpBadRequestException;
 import controller.RadioInfoController;
-import model.Channel;
-import model.Program;
-import model.RadioInfoModel;
-import model.Schedule;
+import model.*;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -112,6 +109,40 @@ public class ControllerTests {
         radioInfoController.selectChannel(200);
 
         verify(radioApi, times(1)).getSchedule(200);
+    }
+
+    @Test
+    void shouldKeepConcurrentState() throws HttpBadRequestException, IOException, URISyntaxException, InterruptedException {
+        for (int i = 0; i < 10; i++) {
+            SrRadioApi srRadioApi = new SrRadioApi();
+            RadioInfoModel model = new RadioInfoModel();
+            RadioInfoController controller = new RadioInfoController(model, srRadioApi);
+            controller.fetchChannels();
+            controller.selectChannel(132);
+            Thread t1 = new Thread(() -> {
+                try {
+                    controller.selectChannel(200);
+                } catch (HttpBadRequestException | IOException | URISyntaxException | InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+            });
+            Thread t2 = new Thread(() -> {
+                try {
+                    controller.updateCachedSchedules();
+                } catch (HttpBadRequestException | IOException | URISyntaxException | InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+            });
+
+            t1.start();
+            t2.start();
+
+            t1.join();
+            assertFalse(controller.scheduleIsEmpty(200));
+            t2.join();
+            assertFalse(controller.scheduleIsEmpty(200));
+
+        }
     }
 
 }

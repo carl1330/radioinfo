@@ -1,5 +1,5 @@
 package view;
-import api.HttpBadRequestException;
+import model.HttpBadRequestException;
 import com.formdev.flatlaf.FlatDarkLaf;
 import controller.RadioInfoController;
 import model.*;
@@ -37,25 +37,34 @@ public class RadioInfoView implements RadioViewModelObserver {
     public RadioInfoView(RadioInfoController radioInfoController) {
         this.radioInfoController = radioInfoController;
         SwingUtilities.invokeLater(() -> {
-            scheduleTimer = new Timer(60 * 60 * 1000, e -> {
-                try {
-                    radioInfoController.updateCachedSchedules();
-                } catch (HttpBadRequestException | IOException | URISyntaxException | InterruptedException ex) {
-                    ex.printStackTrace();
-                    JOptionPane.showMessageDialog(null, "An error occurred during schedule update", "Error", JOptionPane.ERROR_MESSAGE);
-                }
-            });
-
-            scheduleTimer.start();
-
             FlatDarkLaf.setup();
             try {
                 radioInfoController.fetchChannels();
                 radioInfoController.addModelObserver(this);
                 this.createAndShowMainFrame();
+                radioInfoController.selectChannel(132);
             } catch (HttpBadRequestException | IOException | URISyntaxException | InterruptedException e) {
                 JOptionPane.showMessageDialog(null, "Something went wrong while fetching channels", "Error", JOptionPane.ERROR_MESSAGE);
             }
+            scheduleTimer = new Timer(1000 * 60 * 60, e -> new SwingWorker<Void, Void>() {
+                @Override
+                protected Void doInBackground() throws Exception {
+                    radioInfoController.updateCachedSchedules();
+                    return null;
+                }
+
+                @Override
+                protected void done() {
+                    try {
+                        get();
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        JOptionPane.showMessageDialog(null, "An error occurred during schedule update", "Error", JOptionPane.ERROR_MESSAGE);
+                    }
+                }
+            }.execute());
+
+            scheduleTimer.start();
         });
     }
 
@@ -145,7 +154,7 @@ public class RadioInfoView implements RadioViewModelObserver {
                                     programWindow.setLocationRelativeTo(null);
                                     programWindow.setVisible(true);
                                 } catch (InterruptedException | ExecutionException ex) {
-                                    throw new RuntimeException(ex);
+                                    JOptionPane.showMessageDialog(null, "An error occured while opening program dialog", "Error", JOptionPane.ERROR_MESSAGE);
                                 }
 
                             }
@@ -171,8 +180,6 @@ public class RadioInfoView implements RadioViewModelObserver {
         JMenuBar menuBar = new JMenuBar();
         JMenu menu = new JMenu("File");
         JMenuItem reload = new JMenuItem("Reload cached schedules");
-        JMenuItem exit = new JMenuItem("Exit");
-
         reload.addActionListener((e) -> new Thread(() -> {
             try {
                 radioInfoController.updateCachedSchedules();
@@ -180,8 +187,8 @@ public class RadioInfoView implements RadioViewModelObserver {
                 SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(null, "Något gick fel vid hämtning av tablåer", "Error", JOptionPane.ERROR_MESSAGE));
             }
         }).start());
+
         menu.add(reload);
-        menu.add(exit);
         menuBar.add(menu);
         return menuBar;
     }

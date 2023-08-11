@@ -1,5 +1,7 @@
 package api;
 
+import model.HttpBadRequestException;
+
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;

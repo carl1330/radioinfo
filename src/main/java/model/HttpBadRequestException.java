@@ -1,4 +1,4 @@
-package api;
+package model;
 
 /**
  * An exception class representing a bad HTTP request error.

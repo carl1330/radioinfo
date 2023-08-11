@@ -2,7 +2,7 @@ package api.sr;
 
 import api.RadioApi;
 import com.google.gson.*;
-import api.HttpBadRequestException;
+import model.HttpBadRequestException;
 
 import java.io.IOException;
 import java.net.URISyntaxException;

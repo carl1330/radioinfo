@@ -1,6 +1,6 @@
 package controller;
 
-import api.HttpBadRequestException;
+import model.HttpBadRequestException;
 import api.RadioApiI;
 import model.*;
 
@@ -8,6 +8,8 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * The `RadioInfoController` class is responsible for managing radio information, including fetching
@@ -24,9 +26,12 @@ public class RadioInfoController {
     private final RadioInfoModel radioInfoModel;
     private final RadioApiI radioApi;
 
+    private final ReentrantLock channelUpdateLock;
+
     public RadioInfoController(RadioInfoModel radioInfoModel, RadioApiI srRadioApi) {
         this.radioInfoModel = radioInfoModel;
         this.radioApi = srRadioApi;
+        this.channelUpdateLock = new ReentrantLock();
     }
 
     /**
@@ -69,10 +74,15 @@ public class RadioInfoController {
      * @throws InterruptedException   If the thread is interrupted while waiting.
      */
     public  void fetchSchedule(int channelId) throws HttpBadRequestException, IOException, URISyntaxException, InterruptedException {
-        Schedule schedule = radioApi.getSchedule(channelId).toSchedule();
-        LinkedHashMap<Integer, Channel> channels = radioInfoModel.getChannels();
-        channels.replace(channelId, new Channel(channelId, radioInfoModel.getChannels().get(channelId).name(), schedule));
-        radioInfoModel.setChannels(channels);
+        channelUpdateLock.lock();
+        try {
+            Schedule schedule = radioApi.getSchedule(channelId).toSchedule();
+            LinkedHashMap<Integer, Channel> channels = radioInfoModel.getChannels();
+            channels.replace(channelId, new Channel(channelId, radioInfoModel.getChannels().get(channelId).name(), schedule));
+            radioInfoModel.setChannels(channels);
+        } finally {
+            channelUpdateLock.unlock();
+        }
     }
 
     /**
@@ -84,16 +94,21 @@ public class RadioInfoController {
      * @throws InterruptedException   If the thread is interrupted while waiting.
      */
     public void updateCachedSchedules() throws HttpBadRequestException, IOException, URISyntaxException, InterruptedException {
-        LinkedHashMap<Integer, Channel> channels = new LinkedHashMap<>();
-        for (Channel channel : radioInfoModel.getChannels().values()) {
-            if(!channel.schedule().isEmpty()) {
-                Schedule schedule = radioApi.getSchedule(channel.id()).toSchedule();
-                channels.put(channel.id(), new Channel(channel.id(), channel.name(), schedule));
-            } else {
-                channels.put(channel.id(), channel);
+        channelUpdateLock.lock();
+        try {
+            LinkedHashMap<Integer, Channel> channels = new LinkedHashMap<>();
+            for (Channel channel : radioInfoModel.getChannels().values()) {
+                if(!scheduleIsEmpty(channel.id())) {
+                    Schedule schedule = radioApi.getSchedule(channel.id()).toSchedule();
+                    channels.put(channel.id(), new Channel(channel.id(), channel.name(), schedule));
+                } else {
+                    channels.put(channel.id(), channel);
+                }
             }
+            radioInfoModel.setChannels(channels);
+        } finally {
+            channelUpdateLock.unlock();
         }
-        radioInfoModel.setChannels(channels);
     }
 
     /**
@@ -101,7 +116,7 @@ public class RadioInfoController {
      *
      * @return A map of channel IDs to their corresponding Channel objects.
      */
-    public LinkedHashMap<Integer, Channel> getChannels() {
+    public Map<Integer, Channel> getChannels() {
         return radioInfoModel.getChannels();
     }
 
@@ -141,9 +156,7 @@ public class RadioInfoController {
      * @return True if the schedule is empty, otherwise false.
      */
     public boolean scheduleIsEmpty(int channelId) {
-        if(getChannels().get(channelId).schedule().isEmpty())
-            return true;
-        return getChannels().get(channelId).schedule().isEmpty();
+        return getChannels().containsKey(channelId) && getChannels().get(channelId).schedule().isEmpty();
     }
 
     /**

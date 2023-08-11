@@ -2,7 +2,7 @@ import api.sr.SrRadioApi;
 import api.sr.SrRadioApiChannelsResponse;
 import api.sr.SrRadioApiProgramResponse;
 import api.sr.SrRadioApiScheduleResponse;
-import api.HttpBadRequestException;
+import model.HttpBadRequestException;
 import model.Channel;
 import model.Schedule;
 import org.junit.jupiter.api.Test;
