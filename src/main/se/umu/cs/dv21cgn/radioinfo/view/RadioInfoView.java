@@ -1,5 +1,4 @@
 package se.umu.cs.dv21cgn.radioinfo.view;
-import se.umu.cs.dv21cgn.radioinfo.model.HttpBadRequestException;
 import com.formdev.flatlaf.FlatDarkLaf;
 import se.umu.cs.dv21cgn.radioinfo.controller.RadioInfoController;
 import se.umu.cs.dv21cgn.radioinfo.model.*;
@@ -11,12 +10,14 @@ import javax.swing.text.StyledDocument;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.io.IOException;
+import java.lang.reflect.Array;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.ExecutionException;
 
@@ -27,6 +28,7 @@ import java.util.concurrent.ExecutionException;
 public class RadioInfoView implements RadioInfoModelObserver {
     public RadioInfoController radioInfoController;
     private RadioInfoTableModel radioInfoTableModel;
+    private DefaultComboBoxModel<Object> comboBoxModel;
     private Timer scheduleTimer;
 
     /**
@@ -36,36 +38,70 @@ public class RadioInfoView implements RadioInfoModelObserver {
      */
     public RadioInfoView(RadioInfoController radioInfoController) {
         this.radioInfoController = radioInfoController;
+
         SwingUtilities.invokeLater(() -> {
             FlatDarkLaf.setup();
-            try {
-                radioInfoController.fetchChannels();
-                radioInfoController.addModelObserver(this);
-                this.createAndShowMainFrame();
-                radioInfoController.selectChannel(132);
-            } catch (HttpBadRequestException | IOException | URISyntaxException | InterruptedException e) {
-                JOptionPane.showMessageDialog(null, "Something went wrong while fetching channels", "Error", JOptionPane.ERROR_MESSAGE);
-            }
-            scheduleTimer = new Timer(1000 * 60 * 60, e -> new SwingWorker<Void, Void>() {
-                @Override
-                protected Void doInBackground() throws Exception {
-                    radioInfoController.updateCachedSchedules();
-                    return null;
-                }
-
-                @Override
-                protected void done() {
-                    try {
-                        get();
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                        JOptionPane.showMessageDialog(null, "An error occurred during schedule update", "Error", JOptionPane.ERROR_MESSAGE);
-                    }
-                }
-            }.execute());
-
-            scheduleTimer.start();
+            createAndShowMainFrame();
         });
+
+        new SwingWorker<Collection<Channel>, Void>() {
+            @Override
+            protected Collection<Channel> doInBackground() throws Exception {
+                radioInfoController.fetchChannels();
+                radioInfoController.addModelObserver(RadioInfoView.this);
+                radioInfoController.selectChannel(132);
+                return radioInfoController.getChannels().values();
+            }
+
+            @Override
+            protected void done() {
+                try {
+                    Collection<Channel> channels = get();
+                    comboBoxModel.addAll(channels);
+                    comboBoxModel.removeElement("Loading...");
+                    scheduleTimer = createTimer();
+                    scheduleTimer.start();
+                } catch (InterruptedException | ExecutionException e) {
+                    JOptionPane.showMessageDialog(null, "Something went wrong while fetching channels", "Error", JOptionPane.ERROR_MESSAGE);
+                }
+            }
+        }.execute();
+    }
+
+    /**
+     * Creates and returns a Swing Timer that triggers the execution of a
+     * {@link SwingWorker} to reload the schedule data at a regular interval.
+     *
+     * @return A Swing Timer configured to execute the schedule reload worker.
+     */
+    private Timer createTimer() {
+        return new Timer(1000, e -> createReloadScheduleWorker().execute());
+    }
+
+    /**
+     * Creates and returns a SwingWorker that updates the schedule data in the background
+     * and handles exceptions, displaying an error message using a JOptionPane if necessary.
+     *
+     * @return A SwingWorker configured to update the schedule data and handle exceptions.
+     */
+    private SwingWorker<Void, Void> createReloadScheduleWorker() {
+        return new SwingWorker<>() {
+            @Override
+            protected Void doInBackground() throws Exception {
+                radioInfoController.updateCachedSchedules();
+                return null;
+            }
+
+            @Override
+            protected void done() {
+                try {
+                    get();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    JOptionPane.showMessageDialog(null, "An error occurred during schedule update", "Error", JOptionPane.ERROR_MESSAGE);
+                }
+            }
+        };
     }
 
     /**
@@ -180,23 +216,7 @@ public class RadioInfoView implements RadioInfoModelObserver {
         JMenuBar menuBar = new JMenuBar();
         JMenu menu = new JMenu("File");
         JMenuItem reload = new JMenuItem("Reload cached schedules");
-        reload.addActionListener((e) -> new SwingWorker<Void, Void>() {
-            @Override
-            protected Void doInBackground() throws Exception {
-                radioInfoController.updateCachedSchedules();
-                return null;
-            }
-
-            @Override
-            protected void done() {
-                try {
-                    get();
-                } catch (Exception e) {
-                    e.printStackTrace();
-                    JOptionPane.showMessageDialog(null, "An error occurred during schedule update", "Error", JOptionPane.ERROR_MESSAGE);
-                }
-            }
-        }.execute());
+        reload.addActionListener((e) -> createReloadScheduleWorker().execute());
 
         menu.add(reload);
         menuBar.add(menu);
@@ -209,8 +229,8 @@ public class RadioInfoView implements RadioInfoModelObserver {
      * @return The created JComboBox for channel selection.
      */
     private JComboBox<Object> createChannelDropdown() {
-        DefaultComboBoxModel<Object> comboBoxModel;
-        comboBoxModel = new DefaultComboBoxModel<>(radioInfoController.getChannels().values().toArray());
+        comboBoxModel = new DefaultComboBoxModel<>();
+        comboBoxModel.addElement("Loading...");
         JComboBox<Object> channelSelector = new JComboBox<>(comboBoxModel);
         channelSelector.setRenderer(new DefaultListCellRenderer() {
             @Override
@@ -250,7 +270,9 @@ public class RadioInfoView implements RadioInfoModelObserver {
     @Override
     public void onRadioDataChanged() {
         ArrayList<Program> schedule = (ArrayList<Program>) radioInfoController.getSelectedChannelSchedule();
-        radioInfoTableModel.setSchedule(schedule);
+        SwingUtilities.invokeLater(() -> {
+            radioInfoTableModel.setSchedule(schedule);
+        });
     }
 
     /**
@@ -271,12 +293,12 @@ public class RadioInfoView implements RadioInfoModelObserver {
 
         /**
          * Sets the schedule data and notifies the table that the data has changed.
-         *
+         * This method should only be called on the EDT for thread safety.
          * @param schedule The new schedule data to be displayed in the table.
          */
         public void setSchedule(ArrayList<Program> schedule) {
             this.schedule = schedule;
-            SwingUtilities.invokeLater(this::fireTableDataChanged);
+            this.fireTableDataChanged();
         }
 
         @Override

@@ -141,7 +141,6 @@ public class ControllerTests {
             assertFalse(controller.scheduleIsEmpty(200));
             t2.join();
             assertFalse(controller.scheduleIsEmpty(200));
-
         }
     }
 
