@@ -75,7 +75,7 @@ public class RadioInfoView implements RadioInfoModelObserver {
      * @return A Swing Timer configured to execute the schedule reload worker.
      */
     private Timer createTimer() {
-        return new Timer(1000, e -> createReloadScheduleWorker().execute());
+        return new Timer(1000 * 60 * 60, e -> createReloadScheduleWorker().execute());
     }
 
     /**
